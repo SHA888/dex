@@ -42,20 +42,37 @@ contract Dex is Wallet {
 
         Order[] storage orders = orderBook[ticker][uint(side)];
         // list of the orders
-        order.push(
-            Order(nextOrderId_, msg.sender, side, ticker, amount, price)
+        orders.push(
+            Order(nextOrderId, msg.sender, side, ticker, amount, price)
         );
 
         // Bubble sort
-        if (side == side.BUY) {
-            
-        }
-        else if (side == side.SELL) {
+        uint i = orders.length > 0 ? orders.length - 1 : 0;
 
-        } 
+        if (side == Side.BUY) {
+            while(i > 0) {
+                if(orders[i - 1].price > orders[i].price) {
+                    break;
+                }
+                Order memory orderToMove = orders[i - 1];
+                orders[i - 1] = orders[i];
+                orders[i] = orderToMove;
+                i--;
+            }
+        }
+        else if (side == Side.SELL) {
+            while(i > 0) {
+                if(orders[i - 1].price < orders[i].price) {
+                    break;
+                }
+                Order memory orderToMove = orders[i - 1];
+                orders[i - 1] = orders[i];
+                orders[i] = orderToMove;
+                i--;
+            }
+        }
 
         nextOrderId++;
 
     }
-
 }
