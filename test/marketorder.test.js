@@ -78,8 +78,51 @@ contract("Dex", account => {
     })
 
     // The eth balance of the buyer should decrease with the filled amounts
+    it("The eth balance of the buyer should decrease with the filled amount", async () => {
+        let dex = await Dex.deployed()
+        let link = await Link.deployed()
+
+        // Seller deposits LINK and creates a sell limit order for 1 LINK for 300 wei
+        await link.approve(dex.address, 500, {from: accounts[1]});
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, {from: accounts[1]});
+
+        // Check buyer ETH balance before trade
+        let balanceBefore = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
+        await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 1);
+        let balanceAfter = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
+
+        assert.equal(balanceBefore.toNumber() - 300, balanceAfter());
+    })
 
     // The token balances of the limit order sellers should decrease with the filled amounts
+    it("The token balances of the limit order sellers should decrease with the filled amounts", async () => {
+        let dex = await Dex.deployed()
+        let link = await Link.deployed()
+
+        let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); // Get sell side orderbook
+        assert(orderbook.length == 0, "Sell side Orderbook should be empty at start of test");
+
+        // Seller Account[2] deposits link
+        await link.approve(dex.address, 500, {from: accounts[2]});
+        await dex.deposit(100, web3.utils.fromUtf8("LINK"), {from: accounts[2]});
+
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, {from: accounts[1]})
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 400, {from: accounts[2]})
+
+        // Check sellers LINK balance before trade
+        let account1balanceBefore = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"));
+        let account2balanceBefore = await dex.balances(accounts[2], web3.utils.fromUtf8("LINK"));
+
+        // Account[0] created market order to buy both sell orders
+        await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 2);
+
+        // Check sellers Link balances after trade
+        let account1balanceAfter = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"));
+        let account2balanceAfter = await dex.balances(accounts[2], web3.utils.fromUtf8("LINK"));
+
+        assert.equal(account1balanceBefore.toNumber() - 1, account1balanceAfter.toNumber());
+        assert.equal(account2balanceBefore.toNumber() - 1, account2balanceAfter.toNumber());
+    })
 
     // Filled limit orders should be removed from the order book
 
