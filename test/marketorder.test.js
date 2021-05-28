@@ -125,8 +125,51 @@ contract("Dex", account => {
     })
 
     // Filled limit orders should be removed from the order book
+    it("Filled limit orders should be removed from the orderbook", async () => {
+        let dex = await Dex.deployed()
+        let link = await Link.deployed()
+        await dex.addToken(web3.utils.fromUtf8("LINK"), link.address)
+
+        // Seller deposits LINK and creates a sell limit order for 1 link for 300 wei
+        await link.approve(dex.address, 500);
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"));
+
+        await dex.depositEth({value: 10000});
+
+        let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); // Get sell side orderbook
+
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300)
+        await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 1);
+
+        orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); //Get sell side orderbook
+        assert(orderbook.length == 0, "Sell side Orderbook should be empty after trade");
+    })
 
     // Partly filled limit orders should be modified to represent the filled/ remaining amount
+    it("Limit orders filled property should be set correctly after a trade", async () => {
+        let dex = await Dex.deployed()
+
+        let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); // Get sell side Orderbook
+        assert(orderbook.length == 0, "Sell side Orderbook should be empty at start of test");
+
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, {from: accounts[1]})
+        await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 2);
+
+        orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); // Get sell side orderbook
+        assert.equal(orderbook[0].filled, 2);
+        assert.equal(orderbook[0].amount, 5);
+    })
 
     // When creating a BUY market order, the buyer needs tho have enough ETH for the trade
+    it("Shoud throw an error when creating a buy market order without adequate ETH balance", async () => {
+        let dex = await Dex.deployed()
+
+        let balance = await dex.balances(accounts[4], web3.utils.fromUtf8("ETH"))
+        assert.equal( balance.toNumber(), 0, "Initial ETH balance is not 0");
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, {from: accounts[1]})
+
+        await truffleAssert.reverts(
+            dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 5, {from: accounts[4]})
+        )
+    })
 })
