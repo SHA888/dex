@@ -79,6 +79,7 @@ contract Dex is Wallet {
 
     function createMarketOrder(Side side, bytes32 ticker, uint amount) public {
         require(balances[msg.sender][ticker] >= amount, "Insufficient balance");
+
         uint orderBookSide;
         if (side == Side.BUY) {
             orderBookSide = 1;
@@ -95,7 +96,7 @@ contract Dex is Wallet {
             // Update totalFilled;
 
             // Execute the trade & shift balances between buyer/seller
-            // Verify that the buyer has enough ETH to cover
+            // Verify that the buyer has enough ETH to cover the purchase (require)
         }        
 
         // Loop through the orderbook and remove 100% filled orders
