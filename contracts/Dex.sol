@@ -89,9 +89,11 @@ contract Dex is Wallet {
         }
         Order[] storage orders = orderBook[ticker][orderBookSide];
 
-        uint totalFilled;
+        uint totalFilled = 0;
 
         for (uint256 i = 0; i < orders.length && totalFilled < amount; i++) {
+            uint leftToFill = amount.sub(totalFilled); // amount - totalFilled
+            uint availableToFill = orders[i].amount.sub(orders[i].filled); // order.amount - order.filled
             // How much we can fill from order[i]
             // Update totalFilled;
 
